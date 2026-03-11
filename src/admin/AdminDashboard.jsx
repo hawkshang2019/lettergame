@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { analytics } from './analytics';
+import analyticsService from '../services/analyticsService';
 
 const AdminDashboard = ({ onLogout, onBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -12,10 +12,27 @@ const AdminDashboard = ({ onLogout, onBack }) => {
     loadData();
   }, [activeTab]);
 
-  const loadData = () => {
-    setSummary(analytics.getSummary());
-    setUsers(analytics.getUserList());
-    setSessions(analytics.getGameSessions());
+  const loadData = async () => {
+    try {
+      const summaryData = await analyticsService.getSummary();
+      const userList = await analyticsService.getUserList();
+      const activityStats = await analyticsService.getUserActivityStats();
+      
+      setSummary(summaryData);
+      setUsers(userList);
+      setSessions([]); // 暂时不显示详细会话
+    } catch (error) {
+      console.error('加载数据失败:', error);
+      // 设置默认数据
+      setSummary({
+        uniqueUsers: 0,
+        totalVisits: 0,
+        totalQuestions: 0,
+        accuracyRate: 0
+      });
+      setUsers([]);
+      setSessions([]);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -69,19 +86,25 @@ const AdminDashboard = ({ onLogout, onBack }) => {
         <div className="activity-grid">
           <div className="activity-item">
             <span className="activity-label">今日活跃用户</span>
-            <span className="activity-value">{analytics.getUserActivityStats().activeToday}</span>
+            <span className="activity-value">{users.filter(user => {
+              const today = new Date().toISOString().split('T')[0];
+              return user.lastVisit && user.lastVisit.split('T')[0] === today;
+            }).length}</span>
           </div>
           <div className="activity-item">
             <span className="activity-label">本周活跃用户</span>
-            <span className="activity-value">{analytics.getUserActivityStats().activeThisWeek}</span>
+            <span className="activity-value">{users.filter(user => {
+              const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+              return user.lastVisit && new Date(user.lastVisit) > oneWeekAgo;
+            }).length}</span>
           </div>
           <div className="activity-item">
             <span className="activity-label">平均答题数/用户</span>
-            <span className="activity-value">{analytics.getUserActivityStats().avgQuestionsPerUser}</span>
+            <span className="activity-value">{users.length > 0 ? Math.round(summary?.totalQuestions / users.length) : 0}</span>
           </div>
           <div className="activity-item">
             <span className="activity-label">平均正确率</span>
-            <span className="activity-value">{analytics.getUserActivityStats().avgAccuracy}%</span>
+            <span className="activity-value">{summary?.accuracyRate || 0}%</span>
           </div>
         </div>
       </div>
@@ -225,18 +248,15 @@ const AdminDashboard = ({ onLogout, onBack }) => {
         <button className="btn btn-primary admin-footer-btn" onClick={loadData}>
           刷新
         </button>
-        <button className="btn btn-secondary admin-footer-btn" onClick={() => analytics.exportData()}>
+        <button className="btn btn-secondary admin-footer-btn" onClick={() => analyticsService.exportData()}>
           导出
         </button>
-        <button 
-          className="btn btn-danger admin-footer-btn" 
-          onClick={() => {
-            if (window.confirm('确定要清空所有统计数据吗？此操作不可恢复！')) {
-              analytics.clearData();
-              loadData();
-            }
-          }}
-        >
+        <button className="btn btn-danger admin-footer-btn" onClick={() => {
+          if (window.confirm('确定要清空所有统计数据吗？此操作不可恢复！')) {
+            analyticsService.clearData();
+            loadData();
+          }
+        }}>
           清空
         </button>
         <button className="btn btn-logout admin-footer-btn" onClick={onLogout}>

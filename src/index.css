@@ -1282,6 +1282,34 @@ h2 {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+  .app {
+    padding: 0.5rem;
+  }
+  
+  .options {
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .options .btn {
+    width: 100% !important;
+    max-width: 280px;
+    font-size: 1rem;
+    padding: 1rem;
+  }
+  
+  .bottom-buttons {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  
+  .bottom-buttons .btn {
+    width: 100% !important;
+    max-width: 280px;
+    font-size: 1rem;
+    padding: 1rem;
+  }
+  
   .admin-dashboard {
     padding: 1rem;
   }
@@ -1315,5 +1343,17 @@ h2 {
   
   .session-stats {
     flex-direction: column;
+  }
+  
+  .admin-footer-controls {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .admin-footer-btn {
+    width: 70px !important;
+    min-width: 70px !important;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.3rem;
   }
 }

@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import wordList from './wordList';
-import { analytics } from './admin/analytics';
+import analyticsService from './services/analyticsService';
+
+  // 初始化分析系统
+  useEffect(() => {
+    analyticsService.recordVisit();
+  }, []);
 
 const generateAlphabet = (word, blankPositions) => {
   const correctLetters = [];
@@ -132,12 +137,6 @@ function App() {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [userId, setUserId] = useState(null);
 
-  // 初始化分析系统
-  useEffect(() => {
-    const user = analytics.recordVisit();
-    setUserId(user);
-  }, []);
-
   useEffect(() => {
     if (currentWord && (gameMode === 'enToZh' || gameMode === 'zhToEn')) {
       const newOptions = generateOptions(currentWord, gameMode);
@@ -192,11 +191,6 @@ function App() {
     }, 1000);
     setTimer(newTimer);
     setCurrentWord(selectedWords[0]);
-    
-    // 记录游戏会话开始
-    if (userId) {
-      analytics.startGameSession(userId, mode, questionCount, selectedGrades);
-    }
     
     if (mode === 'spelling') {
       const { blanks, blankPositions } = generateBlanks(selectedWords[0].en);
@@ -328,7 +322,7 @@ function App() {
       setFeedback('正确！');
       setFeedbackType('correct');
       setCorrectCount(prev => prev + 1);
-            if (userId) analytics.recordAnswer(userId, currentWord.en, filledWord, true, 0);
+            analyticsService.recordAnswer(currentWord.en, filledWord, true, 0);
       const wordKey = currentWrong.correctAnswer;
       setWordCorrectCount(prev => {
         const newCount = { ...prev };
@@ -343,7 +337,7 @@ function App() {
       setFeedback(`错误！正确答案是: ${currentWrong.correctAnswer}`);
       setFeedbackType('incorrect');
       setWrongCount(prev => prev + 1);
-      if (userId) analytics.recordAnswer(userId, currentWrong.question, currentWrong.userAnswer, false, 0);
+      analyticsService.recordAnswer(currentWrong.question, currentWrong.userAnswer, false, 0);
     }
     
     setPracticeCountdown(3);
@@ -492,9 +486,7 @@ function App() {
     setGameComplete(true);
     
     // 记录游戏会话结束
-    if (userId) {
-      analytics.endGameSession(userId, gameTime);
-    }
+    // 游戏结束，数据已通过答题记录保存到数据库
   };
 
   const checkAnswer = () => {
@@ -529,7 +521,7 @@ function App() {
     if (isCorrect) {
       setScore(prev => prev + Math.round(100 / questionCount));
         setCorrectCount(prev => prev + 1);
-        if (userId) analytics.recordAnswer(userId, currentWord.en, option.text, true, 0);
+        analyticsService.recordAnswer(currentWord.en, option.text, true, 0);
       const wordKey = currentWord.en;
       setWordCorrectCount(prev => {
         const newCount = { ...prev };
@@ -542,7 +534,7 @@ function App() {
       setFeedbackType('correct');
     } else {
       setWrongCount(prev => prev + 1);
-      if (userId) analytics.recordAnswer(userId, currentWord.en, option.text, false, 0);
+      analyticsService.recordAnswer(currentWord.en, option.text, false, 0);
       setWrongAnswers(prev => [...prev, { 
         question: gameMode === 'enToZh' ? currentWord.en : currentWord.zh,
         correctAnswer: correctAnswer,
@@ -608,7 +600,7 @@ function App() {
           setFeedback('恭喜！填空正确！');
           setFeedbackType('correct');
           setCorrectCount(prev => prev + 1);
-          if (userId) analytics.recordAnswer(userId, true);
+          analyticsService.recordAnswer(currentWord.en, filledWord, true, 0);
           setScore(prev => prev + Math.round(100 / questionCount));
           
           const wordKey = currentWord.en;
@@ -625,7 +617,7 @@ function App() {
           setFeedback(`错误！正确答案是: ${word}`);
           setFeedbackType('incorrect');
           setWrongCount(prev => prev + 1);
-            if (userId) analytics.recordAnswer(userId, currentWord.en, filledWord, false, 0);
+            analyticsService.recordAnswer(currentWord.en, filledWord, false, 0);
           setWrongAnswers(prev => [...prev, { 
             question: currentWord.zh,
             correctAnswer: word,
@@ -1135,8 +1127,24 @@ function App() {
   );
 
   const renderAnalytics = () => {
-    const summary = analytics.getSummary();
-    const users = analytics.getUserList();
+    const [summary, setSummary] = useState({
+      totalVisits: 0,
+      uniqueUsers: 0,
+      totalQuestions: 0,
+      accuracyRate: 0
+    });
+    const [users, setUsers] = useState([]);
+
+    // 加载统计数据
+    useEffect(() => {
+      const loadData = async () => {
+        const summaryData = await analyticsService.getSummary();
+        const userList = await analyticsService.getUserList();
+        setSummary(summaryData);
+        setUsers(userList);
+      };
+      loadData();
+    }, []);
     
     return (
       <div className="analytics-container">
@@ -1162,13 +1170,19 @@ function App() {
         </div>
         
         <div className="analytics-controls">
-          <button className="btn btn-primary" onClick={() => analytics.exportData()}>
+          <button className="btn btn-primary" onClick={() => analyticsService.exportData()}>
             导出数据
           </button>
           <button className="btn btn-danger" onClick={() => {
             if (window.confirm('确定要清空所有统计数据吗？此操作不可恢复！')) {
-              analytics.clearData();
-              setAnalyticsData(analytics.getSummary());
+              analyticsService.clearData();
+              setSummary({
+                totalVisits: 0,
+                uniqueUsers: 0,
+                totalQuestions: 0,
+                accuracyRate: 0
+              });
+              setUsers([]);
             }
           }}>
             清空数据
