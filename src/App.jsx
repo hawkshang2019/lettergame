@@ -995,7 +995,14 @@ function App() {
             <span className="result-value">{score}</span>
           </div>
         </div>
-        <button className="btn btn-primary" onClick={() => { setGameMode(null); setGameComplete(false); }}>
+        <button className="btn btn-primary" onClick={() => { 
+          setGameMode(null); 
+          setGameComplete(false); 
+          setShowWrongAnswers(false);
+          setShowSettings(false);
+          setIsPracticeMode(false);
+          setPracticeMode(null);
+        }}>
           返回菜单
         </button>
       </div>
