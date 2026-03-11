@@ -69,8 +69,8 @@ function App() {
   const [wordCorrectCount, setWordCorrectCount] = useState({});
   const [masteredWords, setMasteredWords] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
-  const [questionCount, setQuestionCount] = useState(25);
-  const [countdownSeconds, setCountdownSeconds] = useState(3);
+  const [questionCount, setQuestionCount] = useState(20);
+  const [countdownSeconds, setCountdownSeconds] = useState(2);
   const [selectedGrades, setSelectedGrades] = useState(['1-3', '4']);
   const [practiceOptions, setPracticeOptions] = useState([]);
   const [isPracticeMode, setIsPracticeMode] = useState(false);
@@ -83,6 +83,7 @@ function App() {
 
   const gradeStages = [
     { value: '1-3', label: '1-3年级', grades: ['1', '2', '3'] },
+    { value: '4', label: '4年级', grades: ['4'] },
     { value: '5', label: '5年级', grades: ['5'] },
     { value: '6', label: '6年级', grades: ['6'] }
   ];
@@ -710,7 +711,7 @@ function App() {
       <div className="feedback-row">
         <div className="feedback-container">
           <div className={`feedback ${feedbackType}`}>{feedback}</div>
-          {isAnswered && currentQuestionIndex < questionCount - 1 && <div className="countdown-display">{countdown}秒后下一题</div>}
+          {isAnswered && currentQuestionIndex < questionCount - 1 && <div className="countdown-display">{countdown}</div>}
         </div>
         <div className="options-bottom">
           {currentQuestionIndex > 0 && (
@@ -758,7 +759,7 @@ function App() {
       <div className="feedback-row">
         <div className="feedback-container">
           <div className={`feedback ${feedbackType}`}>{feedback}</div>
-          {isAnswered && currentQuestionIndex < questionCount - 1 && <div className="countdown-display">{countdown}秒后下一题</div>}
+          {isAnswered && currentQuestionIndex < questionCount - 1 && <div className="countdown-display">{countdown}</div>}
         </div>
         <div className="options-bottom">
           {currentQuestionIndex > 0 && (
@@ -823,7 +824,7 @@ function App() {
         <div className="feedback-row">
           <div className="feedback-container">
             <div className={`feedback ${feedbackType}`}>{feedback}</div>
-            {isAnswered && currentQuestionIndex < questionCount - 1 && <div className="countdown-display">{countdown}秒后下一题</div>}
+            {isAnswered && currentQuestionIndex < questionCount - 1 && <div className="countdown-display">{countdown}</div>}
           </div>
           <div className="options-bottom">
             {currentQuestionIndex > 0 && (
