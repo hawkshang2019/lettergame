@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import wordList from './wordList';
+import { analytics } from './admin/analytics';
 
 const generateAlphabet = (word, blankPositions) => {
   const correctLetters = [];
@@ -127,6 +128,15 @@ function App() {
   const [practiceTimer, setPracticeTimer] = useState(null);
   const [gameTime, setGameTime] = useState(0);
   const [timer, setTimer] = useState(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [userId, setUserId] = useState(null);
+
+  // 初始化分析系统
+  useEffect(() => {
+    const user = analytics.recordVisit();
+    setUserId(user);
+  }, []);
 
   useEffect(() => {
     if (currentWord && (gameMode === 'enToZh' || gameMode === 'zhToEn')) {
@@ -182,6 +192,11 @@ function App() {
     }, 1000);
     setTimer(newTimer);
     setCurrentWord(selectedWords[0]);
+    
+    // 记录游戏会话开始
+    if (userId) {
+      analytics.startGameSession(userId, mode, questionCount, selectedGrades);
+    }
     
     if (mode === 'spelling') {
       const { blanks, blankPositions } = generateBlanks(selectedWords[0].en);
@@ -313,6 +328,7 @@ function App() {
       setFeedback('正确！');
       setFeedbackType('correct');
       setCorrectCount(prev => prev + 1);
+            if (userId) analytics.recordAnswer(userId, currentWord.en, filledWord, true, 0);
       const wordKey = currentWrong.correctAnswer;
       setWordCorrectCount(prev => {
         const newCount = { ...prev };
@@ -327,6 +343,7 @@ function App() {
       setFeedback(`错误！正确答案是: ${currentWrong.correctAnswer}`);
       setFeedbackType('incorrect');
       setWrongCount(prev => prev + 1);
+      if (userId) analytics.recordAnswer(userId, currentWrong.question, currentWrong.userAnswer, false, 0);
     }
     
     setPracticeCountdown(3);
@@ -473,6 +490,11 @@ function App() {
     const earnedCoins = baseCoins * timeMultiplier;
     setCoins(prev => prev + earnedCoins);
     setGameComplete(true);
+    
+    // 记录游戏会话结束
+    if (userId) {
+      analytics.endGameSession(userId, gameTime);
+    }
   };
 
   const checkAnswer = () => {
@@ -506,7 +528,8 @@ function App() {
     
     if (isCorrect) {
       setScore(prev => prev + Math.round(100 / questionCount));
-      setCorrectCount(prev => prev + 1);
+        setCorrectCount(prev => prev + 1);
+        if (userId) analytics.recordAnswer(userId, currentWord.en, option.text, true, 0);
       const wordKey = currentWord.en;
       setWordCorrectCount(prev => {
         const newCount = { ...prev };
@@ -519,6 +542,7 @@ function App() {
       setFeedbackType('correct');
     } else {
       setWrongCount(prev => prev + 1);
+      if (userId) analytics.recordAnswer(userId, currentWord.en, option.text, false, 0);
       setWrongAnswers(prev => [...prev, { 
         question: gameMode === 'enToZh' ? currentWord.en : currentWord.zh,
         correctAnswer: correctAnswer,
@@ -584,6 +608,7 @@ function App() {
           setFeedback('恭喜！填空正确！');
           setFeedbackType('correct');
           setCorrectCount(prev => prev + 1);
+          if (userId) analytics.recordAnswer(userId, true);
           setScore(prev => prev + Math.round(100 / questionCount));
           
           const wordKey = currentWord.en;
@@ -600,6 +625,7 @@ function App() {
           setFeedback(`错误！正确答案是: ${word}`);
           setFeedbackType('incorrect');
           setWrongCount(prev => prev + 1);
+            if (userId) analytics.recordAnswer(userId, currentWord.en, filledWord, false, 0);
           setWrongAnswers(prev => [...prev, { 
             question: currentWord.zh,
             correctAnswer: word,
@@ -672,19 +698,21 @@ function App() {
           单词填空
         </button>
       </div>
-      {wrongAnswers.length > 0 && !showWrongAnswers && (
-        <button className="btn btn-wrong-answers" style={{ width: '150px', minWidth: '150px' }} onClick={() => setShowWrongAnswers(true)}>
-          错题本 ({wrongAnswers.length})
+      <div className="bottom-buttons">
+        {wrongAnswers.length > 0 && !showWrongAnswers && (
+          <button className="btn btn-wrong-answers" style={{ width: '150px', minWidth: '150px', height: '50px', minHeight: '50px' }} onClick={() => setShowWrongAnswers(true)}>
+            错题本 ({wrongAnswers.length})
+          </button>
+        )}
+        {wrongAnswers.length === 0 && (
+          <button className="btn btn-wrong-answers" style={{ width: '150px', minWidth: '150px', height: '50px', minHeight: '50px' }} onClick={() => setShowWrongAnswers(true)}>
+            错题本 (0)
+          </button>
+        )}
+        <button className="btn btn-settings" style={{ width: '150px', minWidth: '150px', height: '50px', minHeight: '50px' }} onClick={() => setShowSettings(true)}>
+          设置
         </button>
-      )}
-      {wrongAnswers.length === 0 && (
-        <button className="btn btn-wrong-answers" style={{ width: '150px', minWidth: '150px' }} onClick={() => setShowWrongAnswers(true)}>
-          错题本 (0)
-        </button>
-      )}
-      <button className="btn btn-settings" style={{ width: '150px', minWidth: '150px' }} onClick={() => setShowSettings(true)}>
-        设置
-      </button>
+      </div>
     </div>
   );
 
@@ -1106,11 +1134,79 @@ function App() {
     </div>
   );
 
+  const renderAnalytics = () => {
+    const summary = analytics.getSummary();
+    const users = analytics.getUserList();
+    
+    return (
+      <div className="analytics-container">
+        <h2>数据统计</h2>
+        
+        <div className="analytics-summary">
+          <div className="summary-item">
+            <span className="summary-label">总访问次数</span>
+            <span className="summary-value">{summary.totalVisits}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">独立用户数</span>
+            <span className="summary-value">{summary.uniqueUsers}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">总答题数</span>
+            <span className="summary-value">{summary.totalQuestions}</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-label">正确率</span>
+            <span className="summary-value">{summary.accuracyRate}%</span>
+          </div>
+        </div>
+        
+        <div className="analytics-controls">
+          <button className="btn btn-primary" onClick={() => analytics.exportData()}>
+            导出数据
+          </button>
+          <button className="btn btn-danger" onClick={() => {
+            if (window.confirm('确定要清空所有统计数据吗？此操作不可恢复！')) {
+              analytics.clearData();
+              setAnalyticsData(analytics.getSummary());
+            }
+          }}>
+            清空数据
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowAnalytics(false)}>
+            返回
+          </button>
+        </div>
+        
+        <div className="users-list">
+          <h3>用户列表 ({users.length})</h3>
+          <div className="users-container">
+            {users.map((user, index) => (
+              <div key={user.id} className="user-item">
+                <div className="user-info">
+                  <span className="user-id">用户 {index + 1}</span>
+                  <span className="user-visits">访问: {user.visits}次</span>
+                  <span className="user-questions">答题: {user.totalQuestions}题</span>
+                  <span className="user-accuracy">正确率: {user.totalQuestions > 0 ? ((user.correctAnswers / user.totalQuestions) * 100).toFixed(1) : 0}%</span>
+                </div>
+                <div className="user-dates">
+                  <span className="user-date">首次: {new Date(user.firstVisit).toLocaleDateString()}</span>
+                  <span className="user-date">最后: {new Date(user.lastVisit).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="app">
       {showSettings && renderSettings()}
+      {showAnalytics && renderAnalytics()}
       {gameComplete && !showWrongAnswers && !practiceMode ? renderGameResults() : null}
-      {!gameMode && !practiceMode && !showSettings && !gameComplete && !showWrongAnswers ? renderModeSelection() : null}
+      {!gameMode && !practiceMode && !showSettings && !showAnalytics && !gameComplete && !showWrongAnswers ? renderModeSelection() : null}
       {practiceMode && renderPracticeGame()}
       {gameMode === 'enToZh' && currentWord && !gameComplete ? renderEnToZhGame() : null}
       {gameMode === 'zhToEn' && currentWord && !gameComplete ? renderZhToEnGame() : null}
