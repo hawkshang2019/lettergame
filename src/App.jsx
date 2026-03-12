@@ -322,7 +322,7 @@ function App() {
       setFeedback('正确！');
       setFeedbackType('correct');
       setCorrectCount(prev => prev + 1);
-            analyticsService.recordAnswer(currentWord.en, filledWord, true, 0);
+      analyticsService.recordAnswer(currentWord.en, answer, true, 0);
       const wordKey = currentWrong.correctAnswer;
       setWordCorrectCount(prev => {
         const newCount = { ...prev };
@@ -337,7 +337,7 @@ function App() {
       setFeedback(`错误！正确答案是: ${currentWrong.correctAnswer}`);
       setFeedbackType('incorrect');
       setWrongCount(prev => prev + 1);
-      analyticsService.recordAnswer(currentWrong.question, currentWrong.userAnswer, false, 0);
+      analyticsService.recordAnswer(currentWrong.question, answer, false, 0);
     }
     
     setPracticeCountdown(3);
@@ -748,7 +748,16 @@ function App() {
               🏁
             </button>
           )}
-          <button className="btn btn-icon btn-danger" onClick={() => { setGameMode(null); setGameComplete(false); }}>
+          <button className="btn btn-icon btn-danger" onClick={() => { 
+            setGameMode(null); 
+            setGameComplete(false); 
+            setIsAnswered(false);
+            setFeedback('');
+            setFeedbackType('');
+            setSelectedAnswer(null);
+            if (timer) clearInterval(timer);
+            setTimer(null);
+          }}>
             🏠
           </button>
         </div>
@@ -796,7 +805,16 @@ function App() {
               🏁
             </button>
           )}
-          <button className="btn btn-icon btn-danger" onClick={() => { setGameMode(null); setGameComplete(false); }}>
+          <button className="btn btn-icon btn-danger" onClick={() => { 
+            setGameMode(null); 
+            setGameComplete(false); 
+            setIsAnswered(false);
+            setFeedback('');
+            setFeedbackType('');
+            setSelectedAnswer(null);
+            if (timer) clearInterval(timer);
+            setTimer(null);
+          }}>
             🏠
           </button>
         </div>
@@ -1022,6 +1040,12 @@ function App() {
           setShowSettings(false);
           setIsPracticeMode(false);
           setPracticeMode(null);
+          setIsAnswered(false);
+          setFeedback('');
+          setFeedbackType('');
+          setSelectedAnswer(null);
+          if (timer) clearInterval(timer);
+          setTimer(null);
         }}>
           返回菜单
         </button>

@@ -104,18 +104,35 @@ exports.handler = async (event, context) => {
           
         case 'recordAnswer':
           // 记录答题结果
-          if (data.users[body.userId]) {
-            data.users[body.userId].totalQuestions++;
-            data.totalQuestions++;
-            
-            if (body.isCorrect) {
-              data.users[body.userId].correctAnswers++;
-              data.totalCorrect++;
-            } else {
-              data.users[body.userId].wrongAnswers++;
-              data.totalWrong++;
-            }
+          if (!data.users[body.userId]) {
+            data.users[body.userId] = {
+              id: body.userId,
+              visits: 1,
+              totalQuestions: 0,
+              correctAnswers: 0,
+              wrongAnswers: 0,
+              gameSessions: [],
+              firstVisit: new Date().toISOString(),
+              lastVisit: new Date().toISOString(),
+              userAgent: body.userAgent || '',
+              language: body.language || '',
+              platform: body.platform || ''
+            };
+            data.uniqueUsers++;
           }
+          
+          data.users[body.userId].totalQuestions++;
+          data.totalQuestions++;
+          
+          if (body.isCorrect) {
+            data.users[body.userId].correctAnswers++;
+            data.totalCorrect++;
+          } else {
+            data.users[body.userId].wrongAnswers++;
+            data.totalWrong++;
+          }
+          
+          data.users[body.userId].lastVisit = new Date().toISOString();
           break;
           
         case 'clearData':
