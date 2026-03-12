@@ -159,7 +159,10 @@ class AnalyticsService {
       question: question,
       userAnswer: userAnswer,
       isCorrect: isCorrect,
-      timeSpent: timeSpent
+      timeSpent: timeSpent,
+      userAgent: navigator.userAgent || '',
+      language: navigator.language || '',
+      platform: navigator.platform || ''
     };
 
     return await this.apiCall(this.apiURL, 'POST', data);

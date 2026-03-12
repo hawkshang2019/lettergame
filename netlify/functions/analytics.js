@@ -133,6 +133,10 @@ exports.handler = async (event, context) => {
           }
           
           data.users[body.userId].lastVisit = new Date().toISOString();
+          // 更新用户代理信息
+          if (body.userAgent) data.users[body.userId].userAgent = body.userAgent;
+          if (body.language) data.users[body.userId].language = body.language;
+          if (body.platform) data.users[body.userId].platform = body.platform;
           break;
           
         case 'clearData':

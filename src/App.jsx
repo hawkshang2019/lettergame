@@ -1243,12 +1243,6 @@ function App() {
     <div className="app">
       {showSettings && renderSettings()}
       {showAnalytics && renderAnalytics()}
-      {gameComplete && !showWrongAnswers && !practiceMode ? renderGameResults() : null}
-      {!gameMode && !practiceMode && !showSettings && !showAnalytics && !gameComplete && !showWrongAnswers ? renderModeSelection() : null}
-      {practiceMode && renderPracticeGame()}
-      {gameMode === 'enToZh' && currentWord && !gameComplete ? renderEnToZhGame() : null}
-      {gameMode === 'zhToEn' && currentWord && !gameComplete ? renderZhToEnGame() : null}
-      {gameMode === 'spelling' && currentWord && !gameComplete ? renderSpellingGame() : null}
       {showWrongAnswers && (
         <div className="wrong-answers-section">
           <h3>错题本 ({wrongAnswers.length})</h3>
@@ -1272,6 +1266,12 @@ function App() {
           </div>
         </div>
       )}
+      {practiceMode && renderPracticeGame()}
+      {gameMode === 'enToZh' && currentWord && !gameComplete ? renderEnToZhGame() : null}
+      {gameMode === 'zhToEn' && currentWord && !gameComplete ? renderZhToEnGame() : null}
+      {gameMode === 'spelling' && currentWord && !gameComplete ? renderSpellingGame() : null}
+      {gameComplete && !showWrongAnswers && !practiceMode && !gameMode ? renderGameResults() : null}
+      {!gameMode && !practiceMode && !showSettings && !showAnalytics && !gameComplete && !showWrongAnswers ? renderModeSelection() : null}
     </div>
   );
 }
