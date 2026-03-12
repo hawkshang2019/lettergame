@@ -2,11 +2,6 @@ import React, { useState, useEffect } from 'react';
 import wordList from './wordList';
 import analyticsService from './services/analyticsService';
 
-  // 初始化分析系统
-  useEffect(() => {
-    analyticsService.recordVisit();
-  }, []);
-
 const generateAlphabet = (word, blankPositions) => {
   const correctLetters = [];
   blankPositions.forEach(pos => {
@@ -136,6 +131,11 @@ function App() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [userId, setUserId] = useState(null);
+
+  // 初始化分析系统
+  useEffect(() => {
+    analyticsService.recordVisit();
+  }, []);
 
   useEffect(() => {
     if (currentWord && (gameMode === 'enToZh' || gameMode === 'zhToEn')) {
