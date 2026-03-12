@@ -1270,7 +1270,7 @@ function App() {
       {gameMode === 'enToZh' && currentWord && !gameComplete ? renderEnToZhGame() : null}
       {gameMode === 'zhToEn' && currentWord && !gameComplete ? renderZhToEnGame() : null}
       {gameMode === 'spelling' && currentWord && !gameComplete ? renderSpellingGame() : null}
-      {gameComplete && !showWrongAnswers && !practiceMode && !gameMode ? renderGameResults() : null}
+      {gameComplete && !showWrongAnswers && !practiceMode ? renderGameResults() : null}
       {!gameMode && !practiceMode && !showSettings && !showAnalytics && !gameComplete && !showWrongAnswers ? renderModeSelection() : null}
     </div>
   );
