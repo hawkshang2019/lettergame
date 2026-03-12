@@ -1,14 +1,9 @@
-// 数据库分析服务 - 连接Netlify Functions API
+// 数据库分析服务 - 本地存储解决方案
 
 class AnalyticsService {
   constructor() {
-    // 根据环境设置API基础URL
-    this.baseURL = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:8888/.netlify/functions' 
-      : '/.netlify/functions';
-    
-    this.apiURL = `${this.baseURL}/analytics`;
     this.userId = this.generateUserId();
+    this.initLocalStorage();
   }
 
   // 生成用户ID
@@ -20,86 +15,135 @@ class AnalyticsService {
     return localStorage.getItem('word_game_user_id');
   }
 
-  // API调用封装
-  async apiCall(endpoint, method = 'GET', data = null) {
-    try {
-      const options = {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+  // 初始化本地存储
+  initLocalStorage() {
+    if (!localStorage.getItem('word_game_analytics')) {
+      const initialData = {
+        totalVisits: 0,
+        uniqueUsers: 0,
+        totalQuestions: 0,
+        totalCorrect: 0,
+        totalWrong: 0,
+        users: {},
+        gameSessions: [],
+        lastUpdated: new Date().toISOString()
       };
-
-      if (data && (method === 'POST' || method === 'PUT')) {
-        options.body = JSON.stringify(data);
-      }
-
-      const response = await fetch(endpoint, options);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('API调用失败:', error);
-      // 静默失败，不影响用户体验
-      return { success: false, error: error.message };
+      localStorage.setItem('word_game_analytics', JSON.stringify(initialData));
     }
+  }
+
+  // 读取本地存储数据
+  readData() {
+    this.initLocalStorage();
+    const data = localStorage.getItem('word_game_analytics');
+    return JSON.parse(data);
+  }
+
+  // 写入本地存储数据
+  writeData(data) {
+    data.lastUpdated = new Date().toISOString();
+    localStorage.setItem('word_game_analytics', JSON.stringify(data));
   }
 
   // 记录用户访问
   async recordVisit() {
-    const data = {
-      action: 'recordVisit',
-      userId: this.userId,
-      userAgent: navigator.userAgent,
-      language: navigator.language,
-      platform: navigator.platform
-    };
-
-    return await this.apiCall(this.apiURL, 'POST', data);
+    try {
+      const data = this.readData();
+      
+      data.totalVisits++;
+      
+      if (!data.users[this.userId]) {
+        data.users[this.userId] = {
+          id: this.userId,
+          visits: 0,
+          totalQuestions: 0,
+          correctAnswers: 0,
+          wrongAnswers: 0,
+          gameSessions: [],
+          firstVisit: new Date().toISOString(),
+          lastVisit: new Date().toISOString(),
+          userAgent: navigator.userAgent || '',
+          language: navigator.language || '',
+          platform: navigator.platform || ''
+        };
+        data.uniqueUsers++;
+      }
+      
+      data.users[this.userId].visits++;
+      data.users[this.userId].lastVisit = new Date().toISOString();
+      
+      this.writeData(data);
+      
+      return { success: true, message: '操作成功' };
+    } catch (error) {
+      console.error('记录访问失败:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   // 记录答题结果
   async recordAnswer(question, userAnswer, isCorrect, timeSpent = 0) {
-    const data = {
-      action: 'recordAnswer',
-      userId: this.userId,
-      question: question,
-      userAnswer: userAnswer,
-      isCorrect: isCorrect,
-      timeSpent: timeSpent
-    };
-
-    return await this.apiCall(this.apiURL, 'POST', data);
+    try {
+      const data = this.readData();
+      
+      if (!data.users[this.userId]) {
+        data.users[this.userId] = {
+          id: this.userId,
+          visits: 1,
+          totalQuestions: 0,
+          correctAnswers: 0,
+          wrongAnswers: 0,
+          gameSessions: [],
+          firstVisit: new Date().toISOString(),
+          lastVisit: new Date().toISOString(),
+          userAgent: navigator.userAgent || '',
+          language: navigator.language || '',
+          platform: navigator.platform || ''
+        };
+        data.uniqueUsers++;
+      }
+      
+      data.users[this.userId].totalQuestions++;
+      data.totalQuestions++;
+      
+      if (isCorrect) {
+        data.users[this.userId].correctAnswers++;
+        data.totalCorrect++;
+      } else {
+        data.users[this.userId].wrongAnswers++;
+        data.totalWrong++;
+      }
+      
+      data.users[this.userId].lastVisit = new Date().toISOString();
+      
+      this.writeData(data);
+      
+      return { success: true, message: '操作成功' };
+    } catch (error) {
+      console.error('记录答题结果失败:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   // 获取统计数据
   async getSummary() {
     try {
-      const result = await this.apiCall(this.apiURL);
+      const data = this.readData();
       
-      if (result.success && result.data) {
-        const data = result.data;
-        
-        // 计算正确率
-        const accuracyRate = data.totalQuestions > 0 
-          ? Math.round((data.totalCorrect / data.totalQuestions) * 100) 
-          : 0;
+      // 计算正确率
+      const accuracyRate = data.totalQuestions > 0 
+        ? Math.round((data.totalCorrect / data.totalQuestions) * 100) 
+        : 0;
 
-        return {
-          uniqueUsers: data.uniqueUsers || 0,
-          totalVisits: data.totalVisits || 0,
-          totalQuestions: data.totalQuestions || 0,
-          totalCorrect: data.totalCorrect || 0,
-          totalWrong: data.totalWrong || 0,
-          accuracyRate: accuracyRate,
-          lastUpdated: data.lastUpdated || new Date().toISOString()
-        };
-      }
-      
-      return this.getDefaultSummary();
+      return {
+        uniqueUsers: data.uniqueUsers || 0,
+        totalVisits: data.totalVisits || 0,
+        totalQuestions: data.totalQuestions || 0,
+        totalCorrect: data.totalCorrect || 0,
+        totalWrong: data.totalWrong || 0,
+        accuracyRate: accuracyRate,
+        lastUpdated: data.lastUpdated || new Date().toISOString()
+      };
     } catch (error) {
       console.error('获取统计数据失败:', error);
       return this.getDefaultSummary();
@@ -109,10 +153,10 @@ class AnalyticsService {
   // 获取用户列表
   async getUserList() {
     try {
-      const result = await this.apiCall(this.apiURL);
+      const data = this.readData();
       
-      if (result.success && result.data && result.data.users) {
-        const users = Object.values(result.data.users);
+      if (data.users) {
+        const users = Object.values(data.users);
         
         return users.map(user => ({
           id: user.id,
@@ -138,10 +182,10 @@ class AnalyticsService {
   // 获取用户活动统计
   async getUserActivityStats() {
     try {
-      const result = await this.apiCall(this.apiURL);
+      const data = this.readData();
       
-      if (result.success && result.data && result.data.users) {
-        const users = Object.values(result.data.users);
+      if (data.users) {
+        const users = Object.values(data.users);
         const now = new Date();
         const today = now.toISOString().split('T')[0];
         const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -155,7 +199,7 @@ class AnalyticsService {
         ).length;
 
         const avgQuestionsPerUser = users.length > 0 
-          ? Math.round(result.data.totalQuestions / users.length) 
+          ? Math.round(data.totalQuestions / users.length) 
           : 0;
 
         const avgAccuracy = users.length > 0 
@@ -179,35 +223,45 @@ class AnalyticsService {
 
   // 清空数据
   async clearData() {
-    const data = {
-      action: 'clearData'
-    };
-
-    return await this.apiCall(this.apiURL, 'POST', data);
+    try {
+      const initialData = {
+        totalVisits: 0,
+        uniqueUsers: 0,
+        totalQuestions: 0,
+        totalCorrect: 0,
+        totalWrong: 0,
+        users: {},
+        gameSessions: [],
+        lastUpdated: new Date().toISOString()
+      };
+      
+      this.writeData(initialData);
+      
+      return { success: true, message: '操作成功' };
+    } catch (error) {
+      console.error('清空数据失败:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   // 导出数据
   async exportData() {
     try {
-      const result = await this.apiCall(this.apiURL);
+      const data = this.readData();
       
-      if (result.success && result.data) {
-        const dataStr = JSON.stringify(result.data, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `word_game_analytics_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        return { success: true };
-      }
+      const dataStr = JSON.stringify(data, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
       
-      return { success: false, error: '导出数据失败' };
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `word_game_analytics_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      return { success: true };
     } catch (error) {
       console.error('导出数据失败:', error);
       return { success: false, error: error.message };
